@@ -1,23 +1,29 @@
+# HELP DCGM_FI_DEV_FAN_SPEED GPU fan speed (in %).
+# TYPE DCGM_FI_DEV_FAN_SPEED gauge
+DCGM_FI_DEV_FAN_SPEED{gpu="0", UUID="GPU-9b0f3276-a83e-aab1-19f4-2bf24bbd51a1"} 0
 # HELP DCGM_FI_DEV_VRAM_TEMP VRAM temperature (in C).
 # TYPE DCGM_FI_DEV_VRAM_TEMP gauge
-DCGM_FI_DEV_VRAM_TEMP{gpu="0", UUID="GPU-ae01cb2f-9a67-f034-d2dd-b7c5e1d89fb4"} 26
+DCGM_FI_DEV_VRAM_TEMP{gpu="0", UUID="GPU-9b0f3276-a83e-aab1-19f4-2bf24bbd51a1"} 52
 # HELP DCGM_FI_DEV_HOT_SPOT_TEMP Hot Spot temperature (in C).
 # TYPE DCGM_FI_DEV_HOT_SPOT_TEMP gauge
-DCGM_FI_DEV_HOT_SPOT_TEMP{gpu="0", UUID="GPU-ae01cb2f-9a67-f034-d2dd-b7c5e1d89fb4"} 32
+DCGM_FI_DEV_HOT_SPOT_TEMP{gpu="0", UUID="GPU-9b0f3276-a83e-aab1-19f4-2bf24bbd51a1"} 59
 # HELP DCGM_FI_DEV_CLOCKS_THROTTLE_REASON Individual throttle reason for GPU clocks.
 # TYPE DCGM_FI_DEV_CLOCKS_THROTTLE_REASON gauge
-DCGM_FI_DEV_CLOCKS_THROTTLE_REASON{reason="GpuIdle", gpu="0", UUID="GPU-ae01cb2f-9a67-f034-d2dd-b7c5e1d89fb4"} 1
-DCGM_FI_DEV_CLOCKS_THROTTLE_REASON{reason="ApplicationsClocksSetting", gpu="0", UUID="GPU-ae01cb2f-9a67-f034-d2dd-b7c5e1d89fb4"} 0
-DCGM_FI_DEV_CLOCKS_THROTTLE_REASON{reason="SwPowerCap", gpu="0", UUID="GPU-ae01cb2f-9a67-f034-d2dd-b7c5e1d89fb4"} 0
-DCGM_FI_DEV_CLOCKS_THROTTLE_REASON{reason="HwSlowdown", gpu="0", UUID="GPU-ae01cb2f-9a67-f034-d2dd-b7c5e1d89fb4"} 0
-DCGM_FI_DEV_CLOCKS_THROTTLE_REASON{reason="SyncBoost", gpu="0", UUID="GPU-ae01cb2f-9a67-f034-d2dd-b7c5e1d89fb4"} 0
-DCGM_FI_DEV_CLOCKS_THROTTLE_REASON{reason="SwThermalSlowdown", gpu="0", UUID="GPU-ae01cb2f-9a67-f034-d2dd-b7c5e1d89fb4"} 0
-DCGM_FI_DEV_CLOCKS_THROTTLE_REASON{reason="HwThermalSlowdown", gpu="0", UUID="GPU-ae01cb2f-9a67-f034-d2dd-b7c5e1d89fb4"} 0
-DCGM_FI_DEV_CLOCKS_THROTTLE_REASON{reason="HwPowerBrakeSlowdown", gpu="0", UUID="GPU-ae01cb2f-9a67-f034-d2dd-b7c5e1d89fb4"} 0
-DCGM_FI_DEV_CLOCKS_THROTTLE_REASON{reason="DisplayClockSetting", gpu="0", UUID="GPU-ae01cb2f-9a67-f034-d2dd-b7c5e1d89fb4"} 0
+DCGM_FI_DEV_CLOCKS_THROTTLE_REASON{reason="GpuIdle", gpu="0", UUID="GPU-9b0f3276-a83e-aab1-19f4-2bf24bbd51a1"} 1
+DCGM_FI_DEV_CLOCKS_THROTTLE_REASON{reason="ApplicationsClocksSetting", gpu="0", UUID="GPU-9b0f3276-a83e-aab1-19f4-2bf24bbd51a1"} 0
+DCGM_FI_DEV_CLOCKS_THROTTLE_REASON{reason="SwPowerCap", gpu="0", UUID="GPU-9b0f3276-a83e-aab1-19f4-2bf24bbd51a1"} 0
+DCGM_FI_DEV_CLOCKS_THROTTLE_REASON{reason="HwSlowdown", gpu="0", UUID="GPU-9b0f3276-a83e-aab1-19f4-2bf24bbd51a1"} 0
+DCGM_FI_DEV_CLOCKS_THROTTLE_REASON{reason="SyncBoost", gpu="0", UUID="GPU-9b0f3276-a83e-aab1-19f4-2bf24bbd51a1"} 0
+DCGM_FI_DEV_CLOCKS_THROTTLE_REASON{reason="SwThermalSlowdown", gpu="0", UUID="GPU-9b0f3276-a83e-aab1-19f4-2bf24bbd51a1"} 0
+DCGM_FI_DEV_CLOCKS_THROTTLE_REASON{reason="HwThermalSlowdown", gpu="0", UUID="GPU-9b0f3276-a83e-aab1-19f4-2bf24bbd51a1"} 0
+DCGM_FI_DEV_CLOCKS_THROTTLE_REASON{reason="HwPowerBrakeSlowdown", gpu="0", UUID="GPU-9b0f3276-a83e-aab1-19f4-2bf24bbd51a1"} 0
+DCGM_FI_DEV_CLOCKS_THROTTLE_REASON{reason="DisplayClockSetting", gpu="0", UUID="GPU-9b0f3276-a83e-aab1-19f4-2bf24bbd51a1"} 0
 # HELP GPU_AER_TOTAL_ERRORS Total AER errors for GPU.
 # TYPE GPU_AER_TOTAL_ERRORS counter
-GPU_AER_TOTAL_ERRORS{gpu="0", UUID="GPU-ae01cb2f-9a67-f034-d2dd-b7c5e1d89fb4"} 0
-# HELP GPU_AER_ERROR_STATE Current error state for GPU (1 for error, 0 for no error).
+GPU_AER_TOTAL_ERRORS{gpu="0", UUID="GPU-9b0f3276-a83e-aab1-19f4-2bf24bbd51a1"} 0
+# HELP GPU_AER_ERROR_STATE Current error state for GPU (2 for error, 1 for no error, 0 unknown state).
 # TYPE GPU_AER_ERROR_STATE gauge
-GPU_ERROR_STATE{gpu="0", UUID="GPU-ae01cb2f-9a67-f034-d2dd-b7c5e1d89fb4"} 0
+GPU_ERROR_STATE{gpu="0", UUID="GPU-9b0f3276-a83e-aab1-19f4-2bf24bbd51a1"} 1
+# HELP APT_UPGRADABLE_PACKAGES Number of APT packages that can be upgraded.
+# TYPE APT_UPGRADABLE_PACKAGES gauge
+APT_UPGRADABLE_PACKAGES 33

@@ -49,6 +49,7 @@ const ThrottleReasonInfo throttleReasons[] = {
 
 typedef struct {
     char uuid[NVML_DEVICE_UUID_BUFFER_SIZE];
+    unsigned int fan_speed;
     unsigned int vram_temp;
     unsigned int hotspot_temp;
     unsigned int clock_throttle_reasons;
@@ -149,6 +150,11 @@ void createMetricFile(int device_count){
 
     // Iterate through devices and write metrics to the file
     for (int i = 0; i < device_count; i++) {
+        // Write GPU Fan speed
+        fprintf(metrics_file, "# HELP DCGM_FI_DEV_FAN_SPEED GPU fan speed (in %%).\n");
+        fprintf(metrics_file, "# TYPE DCGM_FI_DEV_FAN_SPEED gauge\n");
+        fprintf(metrics_file, "DCGM_FI_DEV_FAN_SPEED{gpu=\"%d\", UUID=\"%s\"} %u\n", i, devices[i].uuid, devices[i].fan_speed);
+
         // Write VRAM temperature
         fprintf(metrics_file, "# HELP DCGM_FI_DEV_VRAM_TEMP VRAM temperature (in C).\n");
         fprintf(metrics_file, "# TYPE DCGM_FI_DEV_VRAM_TEMP gauge\n");
@@ -255,7 +261,6 @@ bool initializeNvml(void) {
 // Function to check if there's an error state for a given GPU
 unsigned int checkGpuErrorState(unsigned int gpuIndex) {
     nvmlDevice_t device;
-    unsigned int fanSpeed;
     nvmlReturn_t result;
 
     // Attempt to get handle for the specified GPU
@@ -265,15 +270,9 @@ unsigned int checkGpuErrorState(unsigned int gpuIndex) {
         return 2; // Error state
     }
 
-    // Attempt to get the fan speed for the GPU
-    result = nvmlDeviceGetFanSpeed(device, &fanSpeed);
-    if (result != NVML_SUCCESS) {
-        fprintf(stderr, "Failed to get fan speed for GPU %u: %s\n", gpuIndex, nvmlErrorString(result));
-        return 2; // Error state
-    }
-
     return 1; // No error state
 }
+
 
 int main(void) {
     // Open the metrics file in write mode to overwrite the existing content
@@ -284,7 +283,6 @@ int main(void) {
         // Initialize PCI library
         struct pci_access *pacc = pci_alloc();
         nvmlReturn_t result = nvmlInit();
-        int num_devices = 0;
         if (result != NVML_SUCCESS) {
          fprintf(stderr, "Failed to initialize NVML: %s\n", nvmlErrorString(result));
             return 1;
@@ -303,160 +301,172 @@ int main(void) {
 
         //printf("\033[2J\033[H");
         for (unsigned int i = 0; i < device_count; i++) {
-        nvmlDevice_t nvml_device;
-        unsigned long long clocksThrottleReasons;
-        char device_name[NVML_DEVICE_NAME_BUFFER_SIZE];
+            nvmlDevice_t nvml_device;
+            unsigned long long clocksThrottleReasons;
+            char device_name[NVML_DEVICE_NAME_BUFFER_SIZE];
 
-                    // Store data in the devices array
+            // Store data in the devices array
 
-        result = nvmlDeviceGetHandleByIndex(i, &nvml_device);
-        if (result != NVML_SUCCESS) {
-            fprintf(stderr, "Failed to get handle for device %u: %s\n", i, nvmlErrorString(result));
-            continue;
-        } //else fprintf(stderr, "NVML_SUCCESS to get handle for device %u: %s\n", i, nvmlErrorString(result));
+            result = nvmlDeviceGetHandleByIndex(i, &nvml_device);
+            if (result != NVML_SUCCESS) {
+                fprintf(stderr, "Failed to get handle for device %u: %s\n", i, nvmlErrorString(result));
+                continue;
+            } //else fprintf(stderr, "NVML_SUCCESS to get handle for device %u: %s\n", i, nvmlErrorString(result));
 
-        result = nvmlDeviceGetName(nvml_device, device_name, NVML_DEVICE_NAME_BUFFER_SIZE);
-        if (result == NVML_SUCCESS) {
-            printf("GPU Name: %s ", device_name);
-        } else {
-            fprintf(stderr, "Failed to get name for device: %s\n", nvmlErrorString(result));
-        // Handle error
-        }
-        nvmlPciInfo_t pciInfo;
-        result = nvmlDeviceGetPciInfo(nvml_device, &pciInfo);
-        if (result != NVML_SUCCESS) {
-            fprintf(stderr, "Failed to get PCI info for device %u: %s\n", i, nvmlErrorString(result));
-            continue;
-        }
+            result = nvmlDeviceGetName(nvml_device, device_name, NVML_DEVICE_NAME_BUFFER_SIZE);
+            if (result == NVML_SUCCESS) {
+                printf("GPU Name: %s ", device_name);
+            } else {
+                fprintf(stderr, "Failed to get name for device: %s\n", nvmlErrorString(result));
+            // Handle error
+            }
+            nvmlPciInfo_t pciInfo;
+            result = nvmlDeviceGetPciInfo(nvml_device, &pciInfo);
+            if (result != NVML_SUCCESS) {
+                fprintf(stderr, "Failed to get PCI info for device %u: %s\n", i, nvmlErrorString(result));
+                continue;
+            }
 
-        // Get GPU temperature
-        unsigned int temp;
-        result = nvmlDeviceGetTemperature(nvml_device, NVML_TEMPERATURE_GPU, &temp);
-        if (result == NVML_SUCCESS) {
-            printf("GPU %u: Temperature: %u C ", i, temp);
-        } else {
-            fprintf(stderr, "Failed to get temperature for device %u: %s\n", i, nvmlErrorString(result));
-        }
+            // Get GPU fan speed
+            unsigned int fan_speed;
+            result = nvmlDeviceGetFanSpeed(nvml_device, &fan_speed);
+            if (result == NVML_SUCCESS) {
+                printf("GPU %u: Fan Speed: %u %% ", i, fan_speed);
+                devices[i].fan_speed = fan_speed;
+            } else {
+                fprintf(stderr, "Failed to get fan speed for device %u: %s\n", i, nvmlErrorString(result));
+            }
 
-        // Get GPU power usage
-        unsigned int power;
-        result = nvmlDeviceGetPowerUsage(nvml_device, &power);
-        if (result == NVML_SUCCESS) {
-            printf("Power Usage: %.2f W ", power / 1000.0); // Power is returned in milliwatts
-        } else {
-            fprintf(stderr, "Failed to get power usage for device %u: %s\n", i, nvmlErrorString(result));
-        }
+            // Get GPU temperature
+            unsigned int temp;
+            result = nvmlDeviceGetTemperature(nvml_device, NVML_TEMPERATURE_GPU, &temp);
+            if (result == NVML_SUCCESS) {
+                printf("Temperature: %u C ", temp);
+            } else {
+                fprintf(stderr, "Failed to get temperature for device %u: %s\n", i, nvmlErrorString(result));
+            }
 
-        for (struct pci_dev *pci_dev = pacc->devices; pci_dev; pci_dev = pci_dev->next) {
-            pci_fill_info(pci_dev, PCI_FILL_IDENT | PCI_FILL_BASES | PCI_FILL_CLASS);
-            unsigned int combinedDeviceId = (pci_dev->device_id << 16) | pci_dev->vendor_id;
+            // Get GPU power usage
+            unsigned int power;
+            result = nvmlDeviceGetPowerUsage(nvml_device, &power);
+            if (result == NVML_SUCCESS) {
+                printf("Power Usage: %.2f W ", power / 1000.0); // Power is returned in milliwatts
+            } else {
+                fprintf(stderr, "Failed to get power usage for device %u: %s\n", i, nvmlErrorString(result));
+            }
 
 
-            if (combinedDeviceId == pciInfo.pciDeviceId && 
-                (unsigned int)pci_dev->domain == pciInfo.domain &&
-                pci_dev->bus == pciInfo.bus &&
-                pci_dev->dev == pciInfo.device) {
 
-                //debugging code that is pritned to the screen when -v is set. 
-                //printf("Found matching NVIDIA Device - Vendor ID: %04x, Device ID: %04x, bus: %02x dev: %02x func: %02x  \n", pci_dev->vendor_id, pci_dev->device_id, pci_dev->bus, pci_dev->dev, pci_dev->func );
-                //printPciDev(pci_dev);
-                //printPciInfo(&pciInfo);
-                //printf("PCI Subsystem combinedDeviceId (0x%08x)\n", combinedDeviceId);
+            for (struct pci_dev *pci_dev = pacc->devices; pci_dev; pci_dev = pci_dev->next) {
+                pci_fill_info(pci_dev, PCI_FILL_IDENT | PCI_FILL_BASES | PCI_FILL_CLASS);
+                unsigned int combinedDeviceId = (pci_dev->device_id << 16) | pci_dev->vendor_id;
 
-                fd = open(MEM_PATH, O_RDWR | O_SYNC);
-                if (fd < 0) {
-                    perror("Failed to open /dev/mem");
-                    continue;
-                }
-                
-                uint32_t phys_addr =  (pci_dev->base_addr[0] & 0xFFFFFFFF) + VRAM_REGISTER_OFFSET;
-                uint32_t base_offset = phys_addr & ~(PG_SZ-1);
-                map_base = mmap(0, PG_SZ, PROT_READ | PROT_WRITE, MAP_SHARED, fd, base_offset);  
-                if (map_base == MAP_FAILED) {
-                    perror("Failed to map BAR0 memory");
-                    close(fd);
-                    continue;
-                }
-                
-                uint32_t *vram_temp_reg = (uint32_t *)((char *)map_base + (phys_addr - base_offset));
-                uint32_t vram_temp_value = *vram_temp_reg;
-                vram_temp_value = ((vram_temp_value & 0x00000fff) / 0x20);
-                printf(" VRAM Temp: %u C ", vram_temp_value);
-                if (i < MAX_DEVICES) {
-                    devices[i].vram_temp = vram_temp_value;
-                } else {
-                    fprintf(stderr, "Exceeded maximum number of devices\n");
-                }
 
-                char uuid[NVML_DEVICE_UUID_BUFFER_SIZE];
-                if (result == NVML_SUCCESS) {
-	                result = nvmlDeviceGetUUID(nvml_device, uuid, sizeof(uuid));
-        	        if (result == NVML_SUCCESS) {
-        	            uuid[sizeof(uuid) - 1] = '\0'; // Ensure null termination
-        	        } else {
-        	            fprintf(stderr, "Failed to get UUID for device %d: %s\n", i, nvmlErrorString(result));
+                if (combinedDeviceId == pciInfo.pciDeviceId &&
+                    (unsigned int)pci_dev->domain == pciInfo.domain &&
+                    pci_dev->bus == pciInfo.bus &&
+                    pci_dev->dev == pciInfo.device) {
+
+                    //debugging code that is pritned to the screen when -v is set.
+                    //printf("Found matching NVIDIA Device - Vendor ID: %04x, Device ID: %04x, bus: %02x dev: %02x func: %02x  \n", pci_dev->vendor_id, pci_dev->device_id, pci_dev->bus, pci_dev->dev, pci_dev->func );
+                    //printPciDev(pci_dev);
+                    //printPciInfo(&pciInfo);
+                    //printf("PCI Subsystem combinedDeviceId (0x%08x)\n", combinedDeviceId);
+
+                    fd = open(MEM_PATH, O_RDWR | O_SYNC);
+                    if (fd < 0) {
+                        perror("Failed to open /dev/mem");
+                        continue;
                     }
-        	    }
 
-               if (i < MAX_DEVICES) {
-                    strncpy(devices[i].uuid, uuid, sizeof(devices[num_devices].uuid));
-                } else {
-                    fprintf(stderr, "Exceeded maximum number of devices\n");
-                }
-                
-	            // Code to read and write the hot spot temperature for the current device
-    	        uint32_t hotSpotRegAddr = (pci_dev->base_addr[0] & 0xFFFFFFFF) + HOTSPOT_REGISTER_OFFSET;
-    	        uint32_t hotSpotBaseOffset = hotSpotRegAddr & ~(PG_SZ-1);
-    	        void* hotSpotMapBase = mmap(0, PG_SZ, PROT_READ, MAP_SHARED, fd, hotSpotBaseOffset);
-    	        if (hotSpotMapBase == MAP_FAILED) {
-        	        fprintf(stderr, "Failed to mmap for hot spot temperature\n");
-        	        continue; // Skip this device if we cannot map the register space
-    	        }
+                    uint32_t phys_addr =  (pci_dev->base_addr[0] & 0xFFFFFFFF) + VRAM_REGISTER_OFFSET;
+                    uint32_t base_offset = phys_addr & ~(PG_SZ-1);
+                    map_base = mmap(0, PG_SZ, PROT_READ | PROT_WRITE, MAP_SHARED, fd, base_offset);
+                    if (map_base == MAP_FAILED) {
+                        perror("Failed to map BAR0 memory");
+                        close(fd);
+                        continue;
+                    }
 
-    	        uint32_t hotSpotRegValue = *((uint32_t *)((char *)hotSpotMapBase + (hotSpotRegAddr - hotSpotBaseOffset)));
-    	        munmap(hotSpotMapBase, PG_SZ); // Unmap immediately after reading
-
-	            uint32_t hotSpotTemp = (hotSpotRegValue >> 8) & 0xff;
-    	        if (hotSpotTemp < 0x7f) {
-                    printf("HotSPotTemp: %u C\n", hotSpotTemp);
-        	        // Write hot spot temperature metric for this device
-
+                    uint32_t *vram_temp_reg = (uint32_t *)((char *)map_base + (phys_addr - base_offset));
+                    uint32_t vram_temp_value = *vram_temp_reg;
+                    vram_temp_value = ((vram_temp_value & 0x00000fff) / 0x20);
+                    printf(" VRAM Temp: %u C ", vram_temp_value);
                     if (i < MAX_DEVICES) {
-                        devices[i].hotspot_temp = hotSpotTemp;
+                        devices[i].vram_temp = vram_temp_value;
                     } else {
                         fprintf(stderr, "Exceeded maximum number of devices\n");
                     }
 
-    	        } 
+                    char uuid[NVML_DEVICE_UUID_BUFFER_SIZE];
+                    if (result == NVML_SUCCESS) {
+                        result = nvmlDeviceGetUUID(nvml_device, uuid, sizeof(uuid));
+                        if (result == NVML_SUCCESS) {
+                            uuid[sizeof(uuid) - 1] = '\0'; // Ensure null termination
+                        } else {
+                            fprintf(stderr, "Failed to get UUID for device %d: %s\n", i, nvmlErrorString(result));
+                        }
+                    }
 
-                result = nvmlDeviceGetCurrentClocksThrottleReasons(nvml_device, &clocksThrottleReasons);
-                if (NVML_SUCCESS != result) {
-                    fprintf(stderr, "Failed to get clocks throttle reasons for device %d: %s\n", i, nvmlErrorString(result));
-                    continue;
-                }
-
-                if (i < MAX_DEVICES) {
-                        devices[i].clock_throttle_reasons = clocksThrottleReasons;
-                } else {
+                   if (i < MAX_DEVICES) {
+                        strncpy(devices[i].uuid, uuid, sizeof(uuid));
+                    } else {
                         fprintf(stderr, "Exceeded maximum number of devices\n");
-                }
-                // Inside the loop where you print out DCGM_FI_DEV_CLOCKS_THROTTLE_REASONS
+                    }
+
+                    // Code to read and write the hot spot temperature for the current device
+                    uint32_t hotSpotRegAddr = (pci_dev->base_addr[0] & 0xFFFFFFFF) + HOTSPOT_REGISTER_OFFSET;
+                    uint32_t hotSpotBaseOffset = hotSpotRegAddr & ~(PG_SZ-1);
+                    void* hotSpotMapBase = mmap(0, PG_SZ, PROT_READ, MAP_SHARED, fd, hotSpotBaseOffset);
+                    if (hotSpotMapBase == MAP_FAILED) {
+                        fprintf(stderr, "Failed to mmap for hot spot temperature\n");
+                        continue; // Skip this device if we cannot map the register space
+                    }
+
+                    uint32_t hotSpotRegValue = *((uint32_t *)((char *)hotSpotMapBase + (hotSpotRegAddr - hotSpotBaseOffset)));
+                    munmap(hotSpotMapBase, PG_SZ); // Unmap immediately after reading
+
+                    uint32_t hotSpotTemp = (hotSpotRegValue >> 8) & 0xff;
+                    if (hotSpotTemp < 0x7f) {
+                        printf("HotSPotTemp: %u C\n", hotSpotTemp);
+                        // Write hot spot temperature metric for this device
+
+                        if (i < MAX_DEVICES) {
+                            devices[i].hotspot_temp = hotSpotTemp;
+                        } else {
+                            fprintf(stderr, "Exceeded maximum number of devices\n");
+                        }
+
+                    }
+
+                    result = nvmlDeviceGetCurrentClocksThrottleReasons(nvml_device, &clocksThrottleReasons);
+                    if (NVML_SUCCESS != result) {
+                        fprintf(stderr, "Failed to get clocks throttle reasons for device %d: %s\n", i, nvmlErrorString(result));
+                        continue;
+                    }
+
+                    if (i < MAX_DEVICES) {
+                            devices[i].clock_throttle_reasons = clocksThrottleReasons;
+                    } else {
+                            fprintf(stderr, "Exceeded maximum number of devices\n");
+                    }
+                    // Inside the loop where you print out DCGM_FI_DEV_CLOCKS_THROTTLE_REASONS
 
 
-                fflush(stdout);
-                // Make sure to flush the stream to write to the file immediately
-                if (map_base != MAP_FAILED) {
-                    munmap(map_base, PG_SZ);
-                    map_base = MAP_FAILED; // Reset to indicate it's unmapped
+                    fflush(stdout);
+                    // Make sure to flush the stream to write to the file immediately
+                    if (map_base != MAP_FAILED) {
+                        munmap(map_base, PG_SZ);
+                        map_base = MAP_FAILED; // Reset to indicate it's unmapped
+                    }
+                    if (fd != -1) {
+                        close(fd);
+                        fd = -1; // Reset to indicate it's closed
+                    }
+                    break; // Break from the PCI device loop once matched
+
                 }
-                if (fd != -1) {
-                    close(fd);
-                    fd = -1; // Reset to indicate it's closed
                 }
-                break; // Break from the PCI device loop once matched
-                
-            }
-            }
         }
         createMetricFile(device_count);
         pci_cleanup(pacc);

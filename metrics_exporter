@@ -1,0 +1,57 @@
+#!/usr/bin/python3
+
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+
+# Custom exception for file-related errors
+class FileException(Exception):
+    def __init__(self, message):
+        self.message = message
+
+
+# Function to read metrics from file
+def read_metrics_from_file(filename):
+    try:
+        with open(filename, 'r') as file:
+            metrics = file.read()
+        return metrics
+    except FileNotFoundError:
+        raise FileException(f"File not found: {filename}")
+    except Exception as e:
+        raise FileException(f"An unexpected error occurred: {str(e)}")
+
+
+# HTTP request handler
+class MetricsRequestHandler(BaseHTTPRequestHandler):
+    # Handler for GET requests
+    def do_GET(self):
+        # logging.debug(f"Received request: {self.request}")
+        if self.path == '/metrics':
+            try:
+                metrics_file_path = './metrics.txt'  # Default metrics file path
+                metrics = read_metrics_from_file(metrics_file_path)
+                self.send_response(200)
+                self.send_header('Content-type', 'text/plain')
+                self.end_headers()
+                self.wfile.write(metrics.encode('utf-8'))
+            except FileException as e:
+                self.send_error(404, f"File error: {e.message}")
+            except Exception as e:
+                self.send_error(500, f"Server error: {str(e)}")
+        else:
+            self.send_error(404, "Not found")
+
+
+# Main function to run the server
+def main():
+    # logging.getLogger().setLevel(logging.DEBUG)
+
+    host = '0.0.0.0'
+    port = 9500
+    server = HTTPServer((host, port), MetricsRequestHandler)
+    print(f'Starting metrics server on {host}:{port}...')
+    server.serve_forever()
+
+
+if __name__ == '__main__':
+    main()

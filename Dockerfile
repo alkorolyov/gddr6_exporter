@@ -6,6 +6,7 @@ WORKDIR /usr/src/app
 
 # Install necessary packages for building
 RUN apt-get update && apt-get install -y \
+    python3 \
     build-essential \
     pciutils \
     libpci-dev
@@ -13,16 +14,11 @@ RUN apt-get update && apt-get install -y \
 
 # Copy the necessary files into the container
 COPY nvml_direct_access.c .
-COPY metrics_exporter.cpp .
-COPY httplib.h .
+COPY metrics_exporter .
 COPY entrypoint.sh .
 
 # Build the nvml_direct_access application
 RUN gcc -std=c11 -O3 -Wall -I/usr/local/cuda/include -o nvml_direct_access nvml_direct_access.c -lpci -lnvidia-ml
-
-
-# Build the metrics_exporter application
-RUN g++ -std=c++11 -o metrics_exporter metrics_exporter.cpp -lpthread
 
 # Expose port 9500 to the host
 EXPOSE 9500
