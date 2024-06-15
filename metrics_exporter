@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
@@ -10,7 +10,7 @@ class FileException(Exception):
 
 
 # Function to read metrics from file
-def read_metrics_from_file(filename):
+def read_from_file(filename):
     try:
         with open(filename, 'r') as file:
             metrics = file.read()
@@ -29,7 +29,7 @@ class MetricsRequestHandler(BaseHTTPRequestHandler):
         if self.path == '/metrics':
             try:
                 metrics_file_path = './metrics.txt'  # Default metrics file path
-                metrics = read_metrics_from_file(metrics_file_path)
+                metrics = read_from_file(metrics_file_path)
                 self.send_response(200)
                 self.send_header('Content-type', 'text/plain')
                 self.end_headers()
@@ -44,8 +44,6 @@ class MetricsRequestHandler(BaseHTTPRequestHandler):
 
 # Main function to run the server
 def main():
-    # logging.getLogger().setLevel(logging.DEBUG)
-
     host = '0.0.0.0'
     port = 9500
     server = HTTPServer((host, port), MetricsRequestHandler)

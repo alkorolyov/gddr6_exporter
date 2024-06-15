@@ -466,7 +466,7 @@ int main(void) {
                     break; // Break from the PCI device loop once matched
 
                 }
-                }
+            }
         }
         createMetricFile(device_count);
         pci_cleanup(pacc);
